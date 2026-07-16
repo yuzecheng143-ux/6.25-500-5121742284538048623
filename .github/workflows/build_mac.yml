@@ -1,0 +1,49 @@
+name: 构建 macOS 蒲公英采集
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-arm64:
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install pyinstaller websocket-client openpyxl
+
+      - name: PyInstaller 打包 (ARM64)
+        run: |
+          pyinstaller \
+            --onefile \
+            --console \
+            --hidden-import openpyxl \
+            --hidden-import tkinter \
+            --hidden-import websocket \
+            --name "蒲公英采集" \
+            pgy_mac.py
+
+      - name: 组装交付包
+        run: |
+          mkdir -p 交付_macOS_ARM64
+          cp dist/蒲公英采集 交付_macOS_ARM64/
+          cp 启动Chrome_mac.command 交付_macOS_ARM64/
+          cp 使用说明_mac.txt 交付_macOS_ARM64/
+          chmod +x 交付_macOS_ARM64/蒲公英采集
+          chmod +x 交付_macOS_ARM64/启动Chrome_mac.command
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: 蒲公英爬虫_macOS_ARM64
+          path: 交付_macOS_ARM64/
