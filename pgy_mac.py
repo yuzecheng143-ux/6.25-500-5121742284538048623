@@ -79,34 +79,35 @@ def ask_excel_file():
     return filepath
 
 def read_ids_from_excel(path):
-    """从Excel的Homepage列提取用户ID"""
+    """从Excel的Homepage列提取用户ID（表头行不固定，逐行搜索直至找到）"""
     wb = openpyxl.load_workbook(path, read_only=True)
     ws = None
+    header_row = None
+    homepage_col = None
     for sname in wb.sheetnames:
         s = wb[sname]
         if s.sheet_state == 'hidden':
             continue
-        for col in range(1, s.max_column + 1):
-            val = s.cell(2, col).value
-            if val and 'homepage' in str(val).lower():
-                ws = s
+        # 在所有行中搜索Homepage表头
+        for row in range(1, s.max_row + 1):
+            for col in range(1, s.max_column + 1):
+                val = s.cell(row, col).value
+                if val and 'homepage' in str(val).lower():
+                    ws = s
+                    header_row = row
+                    homepage_col = col
+                    break
+            if ws:
                 break
         if ws:
             break
     if not ws:
         raise ValueError("找不到包含Homepage列的sheet，请确认Excel格式")
-
-    homepage_col = None
-    for col in range(1, ws.max_column + 1):
-        val = ws.cell(2, col).value
-        if val and 'homepage' in str(val).lower():
-            homepage_col = col
-            break
     if not homepage_col:
         raise ValueError("找不到Homepage列，请确认Excel格式")
 
     user_ids = []
-    for row in range(3, ws.max_row + 1):
+    for row in range(header_row + 1, ws.max_row + 1):
         url = ws.cell(row, homepage_col).value
         if url and 'user/profile/' in str(url):
             uid = str(url).split('user/profile/')[-1].split('?')[0].strip()
